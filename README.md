@@ -167,4 +167,3 @@ This project is licensed under the MIT License. See the LICENSE file for details
 ---
 ---
 
-Feel free to customize this `README.md` to better fit your project specifics and needs!
