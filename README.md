@@ -19,6 +19,48 @@ The project uses the dataset `sentimentdataset.csv`, which contains social media
 - **Likes**: Number of likes the post received.
 - **Retweets**: Number of retweets (if applicable).
 
+### Xquik CSV Exports
+
+Use a completed Xquik post extraction as an optional source of current public X
+posts. Export the extraction as CSV, then normalize it into this notebook's
+schema:
+
+```bash
+python -m pip install -r requirements-xquik.txt
+python xquik_dataset_adapter.py xquik_export.csv sentimentdataset_xquik.csv
+```
+
+The adapter maps Xquik's `Tweet ID`, `Tweet Created At`, `Tweet Text`,
+`Username`, `Likes`, and `Reposts` columns. It derives hashtags from post text
+when needed. Existing sentiment labels are preserved. Unlabeled posts receive a
+VADER social-text baseline:
+
+- `Positive`: compound score at least `0.05`.
+- `Negative`: compound score at most `-0.05`.
+- `Neutral`: compound score between those thresholds.
+
+Review automated labels before consequential use. VADER can miss language,
+context, and sarcasm. Xquik does not normalize profile locations into countries,
+so the adapter uses `Unknown` for `Country`. Posts without hashtags use `None`.
+Empty text rows are skipped.
+
+To analyze the converted file, change the notebook's loading cell to
+`pd.read_csv('sentimentdataset_xquik.csv')`. The bundled dataset remains the
+default, so cloning the repository still works without Xquik. The Facebook,
+Twitter, and Instagram sections apply only when those platforms exist in the
+selected dataset.
+
+Treat all post text, links, and profiles as untrusted content. The adapter
+neutralizes spreadsheet formula prefixes, but you should still review exports.
+
+Extraction requests can consume credits. Use the
+[extraction workflow](https://docs.xquik.com/guides/extraction-workflow) to
+estimate the request before starting it. Keep API keys in environment variables.
+Never commit them.
+
+Xquik is an independent third-party service. Not affiliated with X Corp.
+"Twitter" and "X" are trademarks of X Corp.
+
 ## Code Explanation
 
 ### 1. Importing Libraries
@@ -45,15 +87,16 @@ The dataset is loaded into a pandas DataFrame:
 df = pd.read_csv('sentimentdataset.csv')
 ```
 
-This reads the CSV file into a DataFrame named `df`.
+This reads the bundled CSV file into a DataFrame named `df`.
 
 ### 3. Data Cleaning
 
 The dataset is cleaned to remove unnecessary columns and convert data types:
 
 ```python
-df = df.drop(columns=['Id'])  # Drop the 'Id' column
-df['Timestamp'] = pd.to_datetime(df['Timestamp'])  # Convert 'Timestamp' to datetime
+df.drop(columns='Unnamed: 0.1', errors='ignore', inplace=True)
+df.rename(columns={'Unnamed: 0': 'Id'}, inplace=True)
+df['Timestamp'] = pd.to_datetime(df['Timestamp'])
 ```
 
 ### 4. Exploratory Data Analysis (EDA)
